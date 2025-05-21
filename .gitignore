@@ -1,1 +1,4 @@
 .coverage
+train.txt
+val.txt
+test.txt
