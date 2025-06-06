@@ -2,3 +2,6 @@
 train.txt
 val.txt
 test.txt
+__pycache__
+train.json
+val.json
