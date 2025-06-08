@@ -5,3 +5,4 @@ test.txt
 __pycache__
 train.json
 val.json
+coco_sample.json
