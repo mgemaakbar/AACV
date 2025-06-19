@@ -203,6 +203,7 @@ def bbox_to_yolo(xmin, ymin, xmax, ymax, image_width, image_height):
     return x_center_norm, y_center_norm, width_norm, height_norm
 
 # create yolo label txt
+# NOTE: make sure that you run this only once! because if you run this more than once (there is already an existing train.txt and val.txt) this code will keep appending to the txt files, leading to duplicates filenames
 def df_to_yolo_format_txt(path_prefix, data_split, merged):
     if data_split not in ['train', 'val', 'test']:
         return -1
