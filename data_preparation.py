@@ -67,6 +67,8 @@ def data_json_to_joined_df(path_prefix_to_json, percent = 100, random_sample=Fal
     return merged
 
 # create list of train/val/test image file name list in a txt file (train/val.txt), so we can use cp/rsync with it
+# NOTE: make sure that you run this only once! because if you run this more than once (there is already an existing train.txt and val.txt) this code will keep appending to the txt files, leading to duplicates filenames which might show up as an error during cp like:
+# cp: cannot create regular file '/root/val2017/n003-2018-01-05-15-22-31+0800__CAM_FRONT__1515137385231616.jpg': Permission denied
 def create_image_filename_list_txt(data_split, merged_df):
     if data_split not in ['train', 'val', 'test']:
         return -1
@@ -203,7 +205,6 @@ def bbox_to_yolo(xmin, ymin, xmax, ymax, image_width, image_height):
     return x_center_norm, y_center_norm, width_norm, height_norm
 
 # create yolo label txt
-# NOTE: make sure that you run this only once! because if you run this more than once (there is already an existing train.txt and val.txt) this code will keep appending to the txt files, leading to duplicates filenames
 def df_to_yolo_format_txt(path_prefix, data_split, merged):
     if data_split not in ['train', 'val', 'test']:
         return -1
