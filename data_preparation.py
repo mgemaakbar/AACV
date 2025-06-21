@@ -29,8 +29,7 @@ def create_data_yml(path_prefix_to_json, path_to_output):
     with open(path_to_output + 'data.yml', 'w') as outfile:
         yaml.dump(yml_data, outfile,default_flow_style=False, sort_keys=False)
 
-
-def data_json_to_joined_df(path_prefix_to_json, percent = 100, random_sample=False):
+def data_json_to_joined_df(path_prefix_to_json, percent = 100, random_sample=False, class_type = "category_only"):
     # percent: take only certain percent of the images
     # random_sample: True if you want to randomize which images to take
 
@@ -47,6 +46,9 @@ def data_json_to_joined_df(path_prefix_to_json, percent = 100, random_sample=Fal
     else:
         sample_data = sample_data.iloc[:n_rows]
 
+    attribute = pd.read_json(path_prefix_to_json + 'attribute.json').rename(columns={"name": "attribute_name"})
+    attribute = attribute.sort_values(by='attribute_name')
+
     # object annotation inner join sample_data
     merged = obj_ann.merge(
         sample_data,
@@ -61,10 +63,60 @@ def data_json_to_joined_df(path_prefix_to_json, percent = 100, random_sample=Fal
         how = 'left',
         left_on='category_token',
         right_on='token',
-        suffixes=('_from_merged', '_from_category')
+        suffixes=('_from_first_merged', '_from_category')
+    )
+    
+    # dict with token as key, attr name as value
+    attr_token_to_attr_name = dict(zip(attribute['token'], attribute['attribute_name']))
+
+    # attribute_tokens type is a list of string. an object can have at most 2 attributes, can also be 0
+    # sorting the list of tokens is to make sure (attr_1, attr_2) is the same with (attr_2, attr_1). we don't want those to be treated as two different things
+    merged['attribute_tokens'] = merged['attribute_tokens'].apply(sorted)
+
+    def get_attribute_only_class_name(df_row):
+        attr_names = list(map(attr_token_to_attr_name.get, df_row['attribute_tokens'])) # convert attr tokens to attr name
+        if len(attr_names) == 0: # not all objects have attributes. if we don't do this then the function will return an empty string
+          return "no_attribute"
+        return "+".join(attr_names) 
+
+    def get_category_and_attribute_class_name(df_row):
+        attr_names = list(map(attr_token_to_attr_name.get, df_row['attribute_tokens'])) # convert attr tokens to attr name
+        return "+".join([df_row['category_name']] + attr_names)
+
+
+    # for determining class name of the objects  
+    if class_type == "category_only":
+      merged['class_name'] = merged['category_name'] # class = category name
+    elif class_type == "attribute_only": 
+      merged['class_name'] = merged.apply(get_attribute_only_class_name, axis = 1) # class = attribute name
+    elif class_type == "category_and_attribute":
+      merged['class_name'] = merged.apply(get_category_and_attribute_class_name, axis = 1) # class = category + attribute name
+
+    # assigning integer id for the class name
+    class_name_list = merged['class_name'].unique()
+    class_name_list.sort()
+    class_df = pd.DataFrame(class_name_list, columns=['class_name'])
+    class_df['class_id'] = range(len(class_df)) # assign integer
+
+    # join so the main merged df has the class_id
+    merged = merged.merge(
+        class_df,
+        how = 'left',
+        left_on='class_name',
+        right_on='class_name',
+        suffixes=('_from_second_merged', '_from_class_df')
     )
 
     return merged
+
+
+def has_content(file_path): # return True if the file exist and has content, False if file is empty or does not exist
+    try:
+        with open(file_path, 'r') as file:
+            return bool(file.read().strip())
+    except FileNotFoundError:
+        return False
+
 
 # create list of train/val/test image file name list in a txt file (train/val.txt), so we can use cp/rsync with it
 # NOTE: make sure that you run this only once! because if you run this more than once (there is already an existing train.txt and val.txt) this code will keep appending to the txt files, leading to duplicates filenames in the txt which might show up as an error during cp like:
@@ -72,7 +124,12 @@ def data_json_to_joined_df(path_prefix_to_json, percent = 100, random_sample=Fal
 def create_image_filename_list_txt(data_split, merged_df):
     if data_split not in ['train', 'val', 'test']:
         return -1
-
+    
+    # validation to force us to start clean 
+    if has_content(data_split+".txt"):
+        print("The text file (train/val.txt) already exists and is already filled. Remove the txt file first to make sure we start clean.")
+        return
+    
     df = merged_df[['filename']]
     filenames = set([])
     for index, row in df.iterrows():
