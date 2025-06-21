@@ -29,6 +29,7 @@ def create_data_yml(path_prefix_to_json, path_to_output):
     with open(path_to_output + 'data.yml', 'w') as outfile:
         yaml.dump(yml_data, outfile,default_flow_style=False, sort_keys=False)
 
+
 def data_json_to_joined_df(path_prefix_to_json, percent = 100, random_sample=False, class_type = "category_only"):
     # percent: take only certain percent of the images
     # random_sample: True if you want to randomize which images to take
@@ -66,16 +67,11 @@ def data_json_to_joined_df(path_prefix_to_json, percent = 100, random_sample=Fal
         suffixes=('_from_first_merged', '_from_category')
     )
     
-    # dict with token as key, attr name as value
     attr_token_to_attr_name = dict(zip(attribute['token'], attribute['attribute_name']))
-
-    # attribute_tokens type is a list of string. an object can have at most 2 attributes, can also be 0
-    # sorting the list of tokens is to make sure (attr_1, attr_2) is the same with (attr_2, attr_1). we don't want those to be treated as two different things
-    merged['attribute_tokens'] = merged['attribute_tokens'].apply(sorted)
 
     def get_attribute_only_class_name(df_row):
         attr_names = list(map(attr_token_to_attr_name.get, df_row['attribute_tokens'])) # convert attr tokens to attr name
-        if len(attr_names) == 0: # not all objects have attributes. if we don't do this then the function will return an empty string
+        if len(attr_names) == 0: # not all objects have attributes. if we don't do this then it will return an empty string
           return "no_attribute"
         return "+".join(attr_names) 
 
@@ -83,14 +79,17 @@ def data_json_to_joined_df(path_prefix_to_json, percent = 100, random_sample=Fal
         attr_names = list(map(attr_token_to_attr_name.get, df_row['attribute_tokens'])) # convert attr tokens to attr name
         return "+".join([df_row['category_name']] + attr_names)
 
+    # attribute_tokens type is a list of string. an object can have at most 2 attributes, can also be 0
+    # sorting the list of tokens is to make sure (attr_1, attr_2) is the same with (attr_2, attr_1). we don't want those to be treated as two different things
+    merged['attribute_tokens'] = merged['attribute_tokens'].apply(sorted)
 
-    # for determining class name of the objects  
+    # for determining class name of the object
     if class_type == "category_only":
       merged['class_name'] = merged['category_name'] # class = category name
     elif class_type == "attribute_only": 
       merged['class_name'] = merged.apply(get_attribute_only_class_name, axis = 1) # class = attribute name
     elif class_type == "category_and_attribute":
-      merged['class_name'] = merged.apply(get_category_and_attribute_class_name, axis = 1) # class = category + attribute name
+      merged['class_name'] = merged.apply(get_category_and_attribute_class_name, axis = 1) 
 
     # assigning integer id for the class name
     class_name_list = merged['class_name'].unique()
@@ -108,7 +107,6 @@ def data_json_to_joined_df(path_prefix_to_json, percent = 100, random_sample=Fal
     )
 
     return merged
-
 
 def has_content(file_path): # return True if the file exist and has content, False if file is empty or does not exist
     try:
@@ -138,11 +136,11 @@ def create_image_filename_list_txt(data_split, merged_df):
         with open(data_split+".txt", 'a') as f:
             f.write(fn + "\n")
 
-def df_to_coco_format(merged_df, path_prefix, split): # DETR uses COCO format. it can be used for detectron2 too
+def df_to_coco_format(merged_df, split): # DETR uses COCO format. it can be used for detectron2 too
     if split not in ['val', 'train']:
         return -1
 
-    df = merged_df[['filename', 'bbox', 'category_id', 'category_name', 'width', 'height']]
+    df = merged_df[['filename', 'bbox', 'class_id', 'category_name', 'width', 'height']]
 
     coco_dict = {"images": [], "annotations": [], "categories": []}
     coco_dict["info"] = { # not including this will cause error during training
@@ -178,7 +176,7 @@ def df_to_coco_format(merged_df, path_prefix, split): # DETR uses COCO format. i
         coco_dict["annotations"].append({
             "id": i,
             "image_id": filename_to_id[row['filename']],
-            "category_id": row['category_id'],
+            "category_id": row['class_id'], # don't confuse this category with NuScene Category schema
             "area": (xmax - xmin) * (ymax - ymin),
             "bbox": [xmin, ymin, xmax - xmin, ymax - ymin], # top left, width, height
             "segmentation": [],
@@ -190,15 +188,15 @@ def df_to_coco_format(merged_df, path_prefix, split): # DETR uses COCO format. i
         })
 
 
-    # build category
-    category = pd.read_json(path_prefix + 'category.json').rename(columns={"name": "category_name"})
-    category = category.sort_values(by='category_name')
+    # build category/class (# don't confuse this 'category' with NuScene Category schema)
+    class_name_list = merged_df['class_name'].unique()
+    class_name_list.sort()
 
-    for i, row in category.iterrows():
-        coco_dict["categories"].append({
+    for i in range(len(class_name_list)):
+      coco_dict["categories"].append({
             "id": i,
-            "name": row["category_name"],
-        })
+            "name": class_name_list[i],
+      })
 
     with open(split + ".json", "w") as file:
         file.write(json.dumps(coco_dict))
@@ -265,11 +263,11 @@ def bbox_to_yolo(xmin, ymin, xmax, ymax, image_width, image_height):
 def df_to_yolo_format_txt(path_prefix, data_split, merged):
     if data_split not in ['train', 'val', 'test']:
         return -1
-    df = merged[['bbox', 'category_id', 'category_name', 'filename', 'width',  'height']]
+    df = merged[['bbox', 'class_id', 'category_name', 'filename', 'width',  'height']]
     for index, row in df.iterrows():
         filename = row['filename'].split("/")[-1] # filename column is in the format of samples/CAM_BACK/n010-2018-08-27-16-15-24+0800...
         abs_path_to_label_txt = path_prefix + data_split + "/labels/" + filename[:len(filename)-4] + '.txt' # example: /content/train/label/asdf.txt. remove the .jpg from asdf.jpg first
         x_center, y_center, width, height = bbox_to_yolo(row['bbox'][0], row['bbox'][1], row['bbox'][2], row['bbox'][3], row['width'], row['height'])
         with open(abs_path_to_label_txt, 'a') as f: # append label to the txt
-            f.write(str(row['category_id']) + " " + str(x_center) + " " + str(y_center) + " " + str(width) + " " + str(height) + "\n")
+            f.write(str(row['class_id']) + " " + str(x_center) + " " + str(y_center) + " " + str(width) + " " + str(height) + "\n")
 
