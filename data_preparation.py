@@ -40,24 +40,24 @@ def data_json_to_joined_df(path_prefix_to_json, percent = 100, random_sample=Fal
         how = 'inner',
         right_on='token',
         left_on='sample_data_token',
-        suffixes=('_left', '_right')
+        suffixes=('_from_obj_ann', '_from_sample_data')
     )
 
     merged = merged.merge(
         category,
-        how = 'left',
+        how = 'inner',
         left_on='category_token',
         right_on='token',
         suffixes=('_from_first_merged', '_from_category')
     )
-    
+  
     attr_token_to_attr_name = dict(zip(attribute['token'], attribute['attribute_name']))
 
     def get_attribute_only_class_name(df_row):
         attr_names = list(map(attr_token_to_attr_name.get, df_row['attribute_tokens'])) # convert attr tokens to attr name
         if len(attr_names) == 0: # not all objects have attributes. if we don't do this then it will return an empty string
           return "no_attribute"
-        return "+".join(attr_names) 
+        return "+".join(attr_names)
 
     def get_category_and_attribute_class_name(df_row):
         attr_names = list(map(attr_token_to_attr_name.get, df_row['attribute_tokens'])) # convert attr tokens to attr name
@@ -70,25 +70,10 @@ def data_json_to_joined_df(path_prefix_to_json, percent = 100, random_sample=Fal
     # for determining class name of the object
     if class_type == "category_only":
       merged['class_name'] = merged['category_name'] # class = category name
-    elif class_type == "attribute_only": 
+    elif class_type == "attribute_only":
       merged['class_name'] = merged.apply(get_attribute_only_class_name, axis = 1) # class = attribute name
     elif class_type == "category_and_attribute":
-      merged['class_name'] = merged.apply(get_category_and_attribute_class_name, axis = 1) 
-
-    # assigning integer id for the class name
-    class_name_list = merged['class_name'].unique()
-    class_name_list.sort()
-    class_df = pd.DataFrame(class_name_list, columns=['class_name'])
-    class_df['class_id'] = range(len(class_df)) # assign integer
-
-    # join so the main merged df has the class_id
-    merged = merged.merge(
-        class_df,
-        how = 'left',
-        left_on='class_name',
-        right_on='class_name',
-        suffixes=('_from_second_merged', '_from_class_df')
-    )
+      merged['class_name'] = merged.apply(get_category_and_attribute_class_name, axis = 1)
 
     return merged
 
@@ -124,7 +109,7 @@ def df_to_coco_format(merged_df, split): # DETR uses COCO format. it can be used
     if split not in ['val', 'train']:
         return -1
 
-    df = merged_df[['filename', 'bbox', 'class_id', 'category_name', 'width', 'height']]
+    df = merged_df[['filename', 'bbox', 'class_name', 'category_name', 'width', 'height']]
 
     coco_dict = {"images": [], "annotations": [], "categories": []}
     coco_dict["info"] = { # not including this will cause error during training
@@ -153,6 +138,19 @@ def df_to_coco_format(merged_df, split): # DETR uses COCO format. it can be used
             filename_to_id[row['filename']] = id
             id += 1
             is_image_added[row['filename']] = True
+    
+          
+    # build category/class (# don't confuse this 'category' with NuScene Category schema)
+    class_name_list = merged_df['class_name'].unique()
+    class_name_list.sort()
+    class_name_to_class_id = {class_name_list[i]: i for i in range(len(class_name_list))}
+
+    for i in range(len(class_name_list)):
+      coco_dict["categories"].append({
+            "id": i,
+            "name": class_name_list[i],
+      })
+
 
     # build annotations
     for i, row in df.iterrows():
@@ -160,7 +158,7 @@ def df_to_coco_format(merged_df, split): # DETR uses COCO format. it can be used
         coco_dict["annotations"].append({
             "id": i,
             "image_id": filename_to_id[row['filename']],
-            "category_id": row['class_id'], # don't confuse this category with NuScene Category schema
+            "category_id": class_name_to_class_id[row['class_name']], # don't confuse this category with NuScene Category schema
             "area": (xmax - xmin) * (ymax - ymin),
             "bbox": [xmin, ymin, xmax - xmin, ymax - ymin], # top left, width, height
             "segmentation": [],
@@ -172,18 +170,9 @@ def df_to_coco_format(merged_df, split): # DETR uses COCO format. it can be used
         })
 
 
-    # build category/class (# don't confuse this 'category' with NuScene Category schema)
-    class_name_list = merged_df['class_name'].unique()
-    class_name_list.sort()
-
-    for i in range(len(class_name_list)):
-      coco_dict["categories"].append({
-            "id": i,
-            "name": class_name_list[i],
-      })
-
     with open(split + ".json", "w") as file:
         file.write(json.dumps(coco_dict))
+
 
 
 def display_image_from_coco_json(ann_file, img_dir):
