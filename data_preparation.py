@@ -14,22 +14,6 @@ class InlineList(list): pass
 def represent_inline_list(dumper, data):
     return dumper.represent_sequence('tag:yaml.org,2002:seq', data, flow_style=True)
 
-def create_data_yml(path_prefix_to_json, path_to_output):
-    category = pd.read_json(path_prefix_to_json + 'category.json').rename(columns={"name": "category_name"})
-    category = category.sort_values(by='category_name')
-    category['category_id'] = range(len(category))
-
-    yml_data = {
-        'train': '../train/images',
-        'val': '../val/images',
-        "nc": len(category),
-        "names": InlineList([row['category_name'] for index, row in category.iterrows()])
-    }
-    yaml.add_representer(InlineList, represent_inline_list)
-    with open(path_to_output + 'data.yml', 'w') as outfile:
-        yaml.dump(yml_data, outfile,default_flow_style=False, sort_keys=False)
-
-
 def data_json_to_joined_df(path_prefix_to_json, percent = 100, random_sample=False, class_type = "category_only"):
     # percent: take only certain percent of the images
     # random_sample: True if you want to randomize which images to take
@@ -259,11 +243,27 @@ def bbox_to_yolo(xmin, ymin, xmax, ymax, image_width, image_height):
 
     return x_center_norm, y_center_norm, width_norm, height_norm
 
-# create yolo label txt
-def df_to_yolo_format_txt(path_prefix, data_split, merged):
+# create yolo label txt and yaml
+def df_to_yolo_format_txt_and_yaml(path_prefix, data_split, yaml_output, merged):
     if data_split not in ['train', 'val', 'test']:
         return -1
+    
     df = merged[['bbox', 'class_id', 'category_name', 'filename', 'width',  'height']]
+    
+    class_name_list = df['class_name'].unique()
+    class_name_list.sort()
+    
+    yml_data = {
+        'train': '../train/images',
+        'val': '../val/images',
+        "nc": len(class_name_list),
+        "names": InlineList(class_name_list)
+    }
+    yaml.add_representer(InlineList, represent_inline_list)
+    with open(yaml_output + 'data.yml', 'w') as outfile:
+        yaml.dump(yml_data, outfile,default_flow_style=False, sort_keys=False)
+
+    
     for index, row in df.iterrows():
         filename = row['filename'].split("/")[-1] # filename column is in the format of samples/CAM_BACK/n010-2018-08-27-16-15-24+0800...
         abs_path_to_label_txt = path_prefix + data_split + "/labels/" + filename[:len(filename)-4] + '.txt' # example: /content/train/label/asdf.txt. remove the .jpg from asdf.jpg first
