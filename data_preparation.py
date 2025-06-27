@@ -14,7 +14,19 @@ class InlineList(list): pass
 def represent_inline_list(dumper, data):
     return dumper.represent_sequence('tag:yaml.org,2002:seq', data, flow_style=True)
 
-def data_json_to_joined_df(path_prefix_to_json, percent = 100, random_sample=False, class_type = "category_only"):
+def create_data_yml(path_to_output, class_list):
+    yml_data = {
+        'train': '../train/images',
+        'val': '../val/images',
+        "nc": len(class_list),
+        "names": InlineList(class_list)
+    }
+    yaml.add_representer(InlineList, represent_inline_list)
+    with open(path_to_output + 'data.yml', 'w') as outfile:
+        yaml.dump(yml_data, outfile,default_flow_style=False, sort_keys=False)
+
+
+def data_json_to_joined_df_and_class_list(path_prefix_to_json, percent = 100, random_sample=False, class_type = "category_only"):
     # percent: take only certain percent of the images
     # random_sample: True if you want to randomize which images to take
 
@@ -34,23 +46,15 @@ def data_json_to_joined_df(path_prefix_to_json, percent = 100, random_sample=Fal
     attribute = pd.read_json(path_prefix_to_json + 'attribute.json').rename(columns={"name": "attribute_name"})
     attribute = attribute.sort_values(by='attribute_name')
 
-    # object annotation inner join sample_data
+    #object annotation inner join category
     merged = obj_ann.merge(
-        sample_data,
-        how = 'inner',
-        right_on='token',
-        left_on='sample_data_token',
-        suffixes=('_from_obj_ann', '_from_sample_data')
-    )
-
-    merged = merged.merge(
         category,
         how = 'inner',
         left_on='category_token',
         right_on='token',
-        suffixes=('_from_first_merged', '_from_category')
+        suffixes=('_from_obj_ann', '_from_category')
     )
-  
+
     attr_token_to_attr_name = dict(zip(attribute['token'], attribute['attribute_name']))
 
     def get_attribute_only_class_name(df_row):
@@ -75,7 +79,19 @@ def data_json_to_joined_df(path_prefix_to_json, percent = 100, random_sample=Fal
     elif class_type == "category_and_attribute":
       merged['class_name'] = merged.apply(get_category_and_attribute_class_name, axis = 1)
 
-    return merged
+    class_name_list = merged['class_name'].unique()
+    class_name_list.sort()
+
+    # object annotation inner join sample_data
+    merged = merged.merge(
+        sample_data,
+        how = 'inner',
+        right_on='token',
+        left_on='sample_data_token',
+        suffixes=('_from_first_merged', '_from_sample_data')
+    )
+
+    return merged, class_name_list
 
 def has_content(file_path): # return True if the file exist and has content, False if file is empty or does not exist
     try:
@@ -91,12 +107,12 @@ def has_content(file_path): # return True if the file exist and has content, Fal
 def create_image_filename_list_txt(data_split, merged_df):
     if data_split not in ['train', 'val', 'test']:
         return -1
-    
-    # validation to force us to start clean 
+
+    # validation to force us to start clean
     if has_content(data_split+".txt"):
         print("The text file (train/val.txt) already exists and is already filled. Remove the txt file first to make sure we start clean.")
         return
-    
+
     df = merged_df[['filename']]
     filenames = set([])
     for index, row in df.iterrows():
@@ -105,7 +121,7 @@ def create_image_filename_list_txt(data_split, merged_df):
         with open(data_split+".txt", 'a') as f:
             f.write(fn + "\n")
 
-def df_to_coco_format(merged_df, split): # DETR uses COCO format. it can be used for detectron2 too
+def df_to_coco_format(merged_df, split, class_name_list): # DETR uses COCO format. it can be used for detectron2 too
     if split not in ['val', 'train']:
         return -1
 
@@ -138,13 +154,11 @@ def df_to_coco_format(merged_df, split): # DETR uses COCO format. it can be used
             filename_to_id[row['filename']] = id
             id += 1
             is_image_added[row['filename']] = True
-    
-          
-    # build category/class (# don't confuse this 'category' with NuScene Category schema)
-    class_name_list = merged_df['class_name'].unique()
-    class_name_list.sort()
-    class_name_to_class_id = {class_name_list[i]: i for i in range(len(class_name_list))}
 
+
+    # build category/class (# don't confuse this 'category' with NuScene Category schema)
+    class_name_list.sort()
+    class_name_to_class_id = {class_name_list[i]:i for i in range(len(class_name_list))} 
     for i in range(len(class_name_list)):
       coco_dict["categories"].append({
             "id": i,
@@ -172,7 +186,6 @@ def df_to_coco_format(merged_df, split): # DETR uses COCO format. it can be used
 
     with open(split + ".json", "w") as file:
         file.write(json.dumps(coco_dict))
-
 
 
 def display_image_from_coco_json(ann_file, img_dir):
@@ -233,30 +246,19 @@ def bbox_to_yolo(xmin, ymin, xmax, ymax, image_width, image_height):
     return x_center_norm, y_center_norm, width_norm, height_norm
 
 # create yolo label txt and yaml
-def df_to_yolo_format_txt_and_yaml(path_prefix, data_split, yaml_output, merged):
+def df_to_yolo_format_txt(path_prefix, data_split, class_name_list, merged):
     if data_split not in ['train', 'val', 'test']:
         return -1
     
-    df = merged[['bbox', 'class_id', 'category_name', 'filename', 'width',  'height']]
+    df = merged[['bbox', 'class_name', 'category_name', 'filename', 'width',  'height']]
     
-    class_name_list = df['class_name'].unique()
     class_name_list.sort()
-    
-    yml_data = {
-        'train': '../train/images',
-        'val': '../val/images',
-        "nc": len(class_name_list),
-        "names": InlineList(class_name_list)
-    }
-    yaml.add_representer(InlineList, represent_inline_list)
-    with open(yaml_output + 'data.yml', 'w') as outfile:
-        yaml.dump(yml_data, outfile,default_flow_style=False, sort_keys=False)
-
+    class_name_to_class_id = {class_name_list[i]: i for i in range(len(class_name_list))}
     
     for index, row in df.iterrows():
         filename = row['filename'].split("/")[-1] # filename column is in the format of samples/CAM_BACK/n010-2018-08-27-16-15-24+0800...
         abs_path_to_label_txt = path_prefix + data_split + "/labels/" + filename[:len(filename)-4] + '.txt' # example: /content/train/label/asdf.txt. remove the .jpg from asdf.jpg first
         x_center, y_center, width, height = bbox_to_yolo(row['bbox'][0], row['bbox'][1], row['bbox'][2], row['bbox'][3], row['width'], row['height'])
         with open(abs_path_to_label_txt, 'a') as f: # append label to the txt
-            f.write(str(row['class_id']) + " " + str(x_center) + " " + str(y_center) + " " + str(width) + " " + str(height) + "\n")
+            f.write(str(class_name_to_class_id[row['class_name']]) + " " + str(x_center) + " " + str(y_center) + " " + str(width) + " " + str(height) + "\n")
 
