@@ -26,9 +26,23 @@ def create_data_yml(path_to_output, class_list):
         yaml.dump(yml_data, outfile,default_flow_style=False, sort_keys=False)
 
 
-def data_json_to_joined_df_and_class_list(path_prefix_to_json, percent = 100, random_sample=False, class_type = "category_only"):
+def get_df_and_class_list(root_dir_path, train_percent = 100, val_percent = 100 , train_random_sample=False, val_random_sample = False, class_type = "category_only"):
+    val_df, val_class_list = data_json_to_joined_df_and_class_list(root_dir_path + 'v1.0-val/', val_percent, val_random_sample, class_type)
+    train_df, train_class_list = data_json_to_joined_df_and_class_list(root_dir_path + 'v1.0-train/', train_percent, train_random_sample, class_type)
+
+    # union of validation and training class list
+    # in 100% of validation set and class_type = "category_and_attribute", there is 'vehicle.motorcycle' class (without attribute) but it doesn't exist in 100% training set 
+    class_list = list(set(val_class_list.tolist() + train_class_list.tolist()))
+    class_list.sort() 
+    return train_df, val_df, class_list
+
+
+def data_json_to_joined_df_and_class_list(path_prefix_to_json,percent = 100, random_sample=False, class_type = "category_only"):
     # percent: take only certain percent of the images
     # random_sample: True if you want to randomize which images to take
+    if class_type not in ["category_only", "attribute_only", "category_and_attribute"]:
+        print ("Invalid class type. The valid ones: category_only attribute_only category_and_attribute")
+        return -1
 
     category = pd.read_json(path_prefix_to_json + 'category.json').rename(columns={"name": "category_name"})
     category = category.sort_values(by='category_name')
@@ -71,7 +85,7 @@ def data_json_to_joined_df_and_class_list(path_prefix_to_json, percent = 100, ra
     # sorting the list of tokens is to make sure (attr_1, attr_2) is the same with (attr_2, attr_1). we don't want those to be treated as two different things
     merged['attribute_tokens'] = merged['attribute_tokens'].apply(sorted)
 
-    # for determining class name of the object
+    # for determining class name of the object. always do this before joining with sample_data, to get 100% rows of the annotation -- therefore 100% possible class names
     if class_type == "category_only":
       merged['class_name'] = merged['category_name'] # class = category name
     elif class_type == "attribute_only":
@@ -102,8 +116,6 @@ def has_content(file_path): # return True if the file exist and has content, Fal
 
 
 # create list of train/val/test image file name list in a txt file (train/val.txt), so we can use cp/rsync with it
-# NOTE: make sure that you run this only once! because if you run this more than once (there is already an existing train.txt and val.txt) this code will keep appending to the txt files, leading to duplicates filenames in the txt which might show up as an error during cp like:
-# cp: cannot create regular file '/root/val2017/n003-2018-01-05-15-22-31+0800__CAM_FRONT__1515137385231616.jpg': Permission denied
 def create_image_filename_list_txt(data_split, merged_df):
     if data_split not in ['train', 'val', 'test']:
         return -1
@@ -246,11 +258,11 @@ def bbox_to_yolo(xmin, ymin, xmax, ymax, image_width, image_height):
     return x_center_norm, y_center_norm, width_norm, height_norm
 
 # create yolo label txt and yaml
-def df_to_yolo_format_txt(path_prefix, data_split, class_name_list, merged):
+def df_to_yolo_format_txt(path_prefix, data_split, class_name_list, merged_df):
     if data_split not in ['train', 'val', 'test']:
         return -1
     
-    df = merged[['bbox', 'class_name', 'category_name', 'filename', 'width',  'height']]
+    df = merged_df[['bbox', 'class_name', 'category_name', 'filename', 'width',  'height']]
     
     class_name_list.sort()
     class_name_to_class_id = {class_name_list[i]: i for i in range(len(class_name_list))}
