@@ -8,6 +8,7 @@ import matplotlib.patches as patches
 import cv2
 import os
 import random
+from collections import defaultdict
 
 class InlineList(list): pass
 
@@ -85,7 +86,7 @@ def data_json_to_joined_df_and_class_list(path_prefix_to_json,percent = 100, ran
     # sorting the list of tokens is to make sure (attr_1, attr_2) is the same with (attr_2, attr_1). we don't want those to be treated as two different things
     merged['attribute_tokens'] = merged['attribute_tokens'].apply(sorted)
 
-    # for determining class name of the object. always do this before joining with sample_data, to get 100% rows of the annotation -- therefore 100% possible class names
+    # for determining class name of the object. always do this before joining with sample_data, we need to get 100% rows of obj_ann -- therefore 100% of possible class names
     if class_type == "category_only":
       merged['class_name'] = merged['category_name'] # class = category name
     elif class_type == "attribute_only":
@@ -240,6 +241,31 @@ def display_image_from_coco_json(ann_file, img_dir):
     ax.axis('off')
     plt.tight_layout(pad=0)
     plt.show()
+
+def count_category_occurrences(coco_json_path):
+    # load the COCO annotations
+    coco = COCO(coco_json_path)
+
+    # get category ID to name mapping
+    categories = coco.loadCats(coco.getCatIds())
+    cat_id_to_name = {cat['id']: cat['name'] for cat in categories}
+
+    # initialize counts
+    category_counts = defaultdict(int)
+
+    # get all annotation IDs
+    annotation_ids = coco.getAnnIds()
+    annotations = coco.loadAnns(annotation_ids)
+
+    # count category occurrences
+    for ann in annotations:
+        category_id = ann['category_id']
+        category_counts[category_id] += 1
+
+    for cat_id, count in category_counts.items():
+        print(f"Category '{cat_id_to_name[cat_id]}' (ID {cat_id}): {count} instances")
+
+    return category_counts
 
 
 def bbox_to_yolo(xmin, ymin, xmax, ymax, image_width, image_height):
