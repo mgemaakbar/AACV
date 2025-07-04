@@ -35,6 +35,10 @@ def get_df_and_class_list(root_dir_path, train_percent = 100, val_percent = 100 
     # in 100% of validation set and class_type = "category_and_attribute", there is 'vehicle.motorcycle' class (without attribute) but it doesn't exist in 100% training set 
     class_list = list(set(val_class_list.tolist() + train_class_list.tolist()))
     class_list.sort() 
+
+    # also to clarify: class_list will always be 100% of the possible class names regardless of train_percent or val_percent you use
+    # if you take only -- for example -- 1% of the data, some classes with small percentage of occurence like vehicle.emergency.ambulance (0.01%), animal (0.04%) most likely will not appear in the data  
+
     return train_df, val_df, class_list
 
 
@@ -86,7 +90,7 @@ def data_json_to_joined_df_and_class_list(path_prefix_to_json,percent = 100, ran
     # sorting the list of tokens is to make sure (attr_1, attr_2) is the same with (attr_2, attr_1). we don't want those to be treated as two different things
     merged['attribute_tokens'] = merged['attribute_tokens'].apply(sorted)
 
-    # for determining class name of the object. always do this before joining with sample_data, we need to get 100% rows of obj_ann -- therefore 100% of possible class names
+    # for determining class name of the object. always do this **before** joining with sample_data, we need to get 100% rows of obj_ann -- therefore 100% of possible class names
     if class_type == "category_only":
       merged['class_name'] = merged['category_name'] # class = category name
     elif class_type == "attribute_only":
