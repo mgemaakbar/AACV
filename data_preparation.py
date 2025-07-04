@@ -37,7 +37,7 @@ def get_df_and_class_list(root_dir_path, train_percent = 100, val_percent = 100 
     class_list.sort() 
 
     # also to clarify: class_list will always be 100% of the possible class names regardless of train_percent or val_percent you use
-    # if you take only -- for example -- 1% of the data, some classes with small percentage of occurence like vehicle.emergency.ambulance (0.01%), animal (0.04%) most likely will not appear in the data  
+    # if you take only -- for example -- 1% of the images, some classes with small percentage of occurence like vehicle.emergency.ambulance (0.01%), animal (0.04%) most likely will not appear in the data  
 
     return train_df, val_df, class_list
 
