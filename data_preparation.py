@@ -41,6 +41,16 @@ def get_df_and_class_list(root_dir_path, train_percent = 100, val_percent = 100 
 
     return train_df, val_df, class_list
 
+def get_test_set(path_prefix_to_json, percent = 100, random_sample=False):
+    sample_data = pd.read_json(path_prefix_to_json + 'sample_data.json')
+    sample_data = sample_data[sample_data['filename'].str.startswith('sample')] 
+    n_rows = int(len(sample_data) * (percent / 100))
+    if random_sample:
+        sample_data = sample_data.sample(n = n_rows)
+    else:
+        sample_data = sample_data.iloc[:n_rows]
+
+    return sample_data
 
 def data_json_to_joined_df_and_class_list(path_prefix_to_json,percent = 100, random_sample=False, class_type = "category_only"):
     # percent: take only certain percent of the images
