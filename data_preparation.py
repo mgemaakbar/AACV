@@ -41,6 +41,8 @@ def get_df_and_class_list(root_dir_path, train_percent = 100, val_percent = 100 
 
     return train_df, val_df, class_list
 
+
+# test set doesn't have annotation, so we only return the dataframe of test set (without joining with object_ann.json)
 def get_test_set(path_prefix_to_json, percent = 100, random_sample=False):
     sample_data = pd.read_json(path_prefix_to_json + 'sample_data.json')
     sample_data = sample_data[sample_data['filename'].str.startswith('sample')] 
