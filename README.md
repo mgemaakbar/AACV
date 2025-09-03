@@ -15,3 +15,5 @@ If you want attribute-only as class (example: 'vehicle.moving'):
 If you want Category concatenated with attribute (example: 'vehicle.car+vehicle.moving') as class:
 
 ```train_df, val_df, class_list = data_preparation.get_df_and_class_list('/content0', 100, 100, train_random_sample=False, val_random_sample=False, class_type = "category_and_attribute")```
+
+A part of ```multi_label_NMS_yolo_inference.ipynb``` which contains a modified code from Ultralytics is licensed with AGPL-3.0 License. Please respect the license if you wish to use it.
