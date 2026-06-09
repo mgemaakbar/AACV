@@ -1,8 +1,8 @@
 All of the code in this repository are tested on Google Colab.
 
-Refer to the original documentation of the dataset: https://www.nuscenes.org/nuimages. Also download the dataset in the official site. Use Google Drive to store the dataset so you can use it in the Python notebooks. 
+Refer to the original documentation of the dataset: https://www.nuscenes.org/nuimages. Also download the dataset which is stored in ```.tgz``` file (as seen in the notebooks) in the official site. Use Google Drive to store the dataset so you can use it in the Python notebooks. 
 
-There are 3 python notebooks: ```detectron2.ipynb```, ```detr_with_detectron2.ipynb```, ```yolo.ipynb```. All of them expects you to import the ```data_preparation.py``` which is asssumed to be in ```/content/```. All of them trains an object detection model with NuImages.
+There are 3 python notebooks: ```detectron2.ipynb```, ```detr_with_detectron2.ipynb```, ```yolo.ipynb```. All of them expects you to import the ```data_preparation.py``` which is asssumed to be in ```/content/```. All of them train an object detection model with NuImages.
 
 ```detr_category_only_as_class.ipynb``` is not used anymore, so you can ignore it. The reason it is not deleted is just to serve as an evidence that we made an effort on it.
 
