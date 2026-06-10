@@ -1,4 +1,6 @@
-All of the code in this repository are tested on Google Colab. Remember that if you try to run it on a different environment with different version of libraries installed, it might not guarantee compatibility with the code and result in errors. But note that the data preparation part of the code require very few dependencies, so it would most likely work just fine -- this warning applies to the training part of the code which was adopted from the links included in the notebooks.
+All of the code in this repository are tested on Google Colab. Remember that if you try to run it on a different environment with different version of libraries installed, it might not guarantee compatibility with the code and result in errors. 
+
+Note that the data preparation part of the code requires very few dependencies, so the data pereparation would most likely work just fine -- this reminder applies to the training part of the code which was adopted from the links included in the notebooks.
 
 Refer to the original documentation of the dataset: https://www.nuscenes.org/nuimages. Also download the dataset which is stored in ```.tgz``` file (as seen in the notebooks) in the official site. Use Google Drive to store the dataset so you can use it in the Python notebooks. 
 
