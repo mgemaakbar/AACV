@@ -1,4 +1,4 @@
-All of the code in this repository are tested on Google Colab. Remember that if you try to run it on a different environment, your environment may have different version of libraries installed.
+All of the code in this repository are tested on Google Colab. Remember that if you try to run it on a different environment, your environment may have different version of libraries installed which may not guarantee compatibility with the code.
 
 Refer to the original documentation of the dataset: https://www.nuscenes.org/nuimages. Also download the dataset which is stored in ```.tgz``` file (as seen in the notebooks) in the official site. Use Google Drive to store the dataset so you can use it in the Python notebooks. 
 
