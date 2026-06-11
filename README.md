@@ -43,3 +43,7 @@ If you want Category concatenated with attribute (example: ```vehicle.car+vehicl
 ## YOLO multi label inference 
 
 A part of ```multi_label_NMS_yolo_inference.ipynb``` which contains a modified code from Ultralytics is licensed with AGPL-3.0 License. Please respect the license if you wish to use it. ```multi_label_NMS_yolo_inference.ipynb``` is a demonstration of multi-label inference on YOLO. 
+
+## Question?
+
+Email me at mgemaakbar@gmail.com if you have any question. 
