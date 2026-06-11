@@ -17,7 +17,7 @@ content/
 └── v1.0-val/
 ```
 
-The code ```data_preparation.get_df_and_class_list('/content/'...``` assumes that the directory structure to be the above (since the parameter ```root_dir_path``` is set to ```/content/```).
+The code ```data_preparation.get_df_and_class_list('/content/'...``` -- which prepares the validation and training set -- assumes that the directory structure to be the above (since the parameter ```root_dir_path``` is set to ```/content/```).
 
 ## Notebooks for training the object detection model
 
