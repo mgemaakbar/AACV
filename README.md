@@ -6,10 +6,12 @@ Refer to the original documentation of the dataset: https://www.nuscenes.org/nui
 
 You need to untar the ```tgz``` as seen in the notebooks. After you uncompress the metadata (```nuimages-v1.0-all-metadata.tgz```), it will have this directory structure:
 
+```
 content/
 ├── v1.0-test/
 ├── v1.0-train/
 └── v1.0-val/
+```
 
 The code ```data_preparation.get_df_and_class_list('/content/'...``` assumes that the directory structure to be the above (since the parameter ```root_dir_path``` is set to ```/content/```).
 
