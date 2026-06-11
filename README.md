@@ -19,7 +19,7 @@ content/
 
 The code ```data_preparation.get_df_and_class_list('/content/'...``` assumes that the directory structure to be the above (since the parameter ```root_dir_path``` is set to ```/content/```).
 
-## Notebooks
+## Notebooks for training the object detection model
 
 There are 3 python notebooks: ```detectron2.ipynb```, ```detr_with_detectron2.ipynb```, ```yolo.ipynb```. All of them expect you to import the ```data_preparation.py``` which is asssumed to be in ```/content/```. All of them train an object detection model with NuImages.
 
