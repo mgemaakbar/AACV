@@ -2,7 +2,16 @@ All of the code in this repository are tested on Google Colab. Remember that if 
 
 Note that the data preparation part of the code requires very few dependencies, so the data preparation would most likely work just fine -- this reminder applies to the training part of the code which was adopted from the links included in the notebooks.
 
-Refer to the original documentation of the dataset: https://www.nuscenes.org/nuimages. Also download the dataset which is stored in ```.tgz``` file (as seen in the notebooks) in the official site. Use Google Drive to store the dataset so you can use it in the Python notebooks. 
+Refer to the original documentation of the dataset: https://www.nuscenes.org/nuimages. Also download the dataset which is stored in ```.tgz``` file (as seen in the notebooks) in the official site. Use Google Drive to store the dataset so you can use it in the Python notebooks.
+
+You need to untar the ```tgz``` as seen in the notebooks. After you uncompress the metadata (```nuimages-v1.0-all-metadata.tgz```), it will have this directory structure:
+
+content/
+├── v1.0-test/
+├── v1.0-train/
+└── v1.0-val/
+
+The code ```data_preparation.get_df_and_class_list('/content/'...``` assumes that the directory structure to be the above (since the parameter ```root_dir_path``` is set to ```/content/```).
 
 There are 3 python notebooks: ```detectron2.ipynb```, ```detr_with_detectron2.ipynb```, ```yolo.ipynb```. All of them expect you to import the ```data_preparation.py``` which is asssumed to be in ```/content/```. All of them train an object detection model with NuImages.
 
