@@ -1,4 +1,6 @@
-## A little bit of reminder
+## Intro
+
+This is a repository that contains a code for training object detection models with the NuImages dataset.
 
 All of the code in this repository are tested on Google Colab. Remember that if you try to run it on a different environment with different version of libraries installed, it might not guarantee compatibility with the code and result in errors. 
 
