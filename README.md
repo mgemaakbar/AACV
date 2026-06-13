@@ -42,7 +42,7 @@ If you want Category concatenated with attribute (example: ```vehicle.car+vehicl
 
 ```train_df, val_df, class_list = data_preparation.get_df_and_class_list('/content/', 100, 100, train_random_sample=False, val_random_sample=False, class_type = "category_and_attribute")```
 
-## YOLO multi label inference 
+## YOLO multi-class inference 
 
 A part of ```multi_label_NMS_yolo_inference.ipynb``` which contains a modified code from Ultralytics is licensed with AGPL-3.0 License. Please respect the license if you wish to use it. ```multi_label_NMS_yolo_inference.ipynb``` is a demonstration of multi-class inference on YOLO. 
 
